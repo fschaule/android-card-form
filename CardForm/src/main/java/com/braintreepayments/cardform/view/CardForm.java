@@ -34,8 +34,8 @@ public class CardForm extends LinearLayout implements
         TextWatcher {
 
     private CardEditText mCardNumber;
-    private ExpirationDateEditText mExpiration;
-    private CvvEditText mCvv;
+    private MonthYearEditText mExpirationView;
+    private CvvEditText mCvvView;
     private PostalCodeEditText mPostalCode;
 
     private boolean mCardNumberRequired;
@@ -48,7 +48,6 @@ public class CardForm extends LinearLayout implements
     private OnCardFormValidListener mOnCardFormValidListener;
     private OnCardFormSubmitListener mOnCardFormSubmitListener;
     private OnCardFormFieldFocusedListener mOnCardFormFieldFocusedListener;
-    private OnCardTypeChangedListener mOnCardTypeChangedListener;
 
     public CardForm(Context context) {
         super(context);
@@ -77,18 +76,18 @@ public class CardForm extends LinearLayout implements
         setVisibility(GONE);
 
         mCardNumber = (CardEditText) findViewById(R.id.bt_card_form_card_number);
-        mExpiration = (ExpirationDateEditText) findViewById(R.id.bt_card_form_expiration);
-        mCvv = (CvvEditText) findViewById(R.id.bt_card_form_cvv);
+        mExpirationView = (MonthYearEditText) findViewById(R.id.bt_card_form_expiration);
+        mCvvView = (CvvEditText) findViewById(R.id.bt_card_form_cvv);
         mPostalCode = (PostalCodeEditText) findViewById(R.id.bt_card_form_postal_code);
 
         mCardNumber.setOnFocusChangeListener(this);
-        mExpiration.setOnFocusChangeListener(this);
-        mCvv.setOnFocusChangeListener(this);
+        mExpirationView.setOnFocusChangeListener(this);
+        mCvvView.setOnFocusChangeListener(this);
         mPostalCode.setOnFocusChangeListener(this);
 
         mCardNumber.setOnClickListener(this);
-        mExpiration.setOnClickListener(this);
-        mCvv.setOnClickListener(this);
+        mExpirationView.setOnClickListener(this);
+        mCvvView.setOnClickListener(this);
         mPostalCode.setOnClickListener(this);
 
         mCardNumber.setOnCardTypeChangedListener(this);
@@ -107,8 +106,9 @@ public class CardForm extends LinearLayout implements
      * @param imeActionLabel the {@link java.lang.String} to display to the user to submit the form
      *   from the keyboard
      */
-    public void setRequiredFields(Activity activity, boolean cardNumberRequired, boolean expirationRequired,
-                                  boolean cvvRequired, boolean postalCodeRequired, String imeActionLabel) {
+    public void setRequiredFields(Activity activity, boolean cardNumberRequired,
+                                  boolean expirationRequired, boolean cvvRequired,
+                                  boolean postalCodeRequired, String imeActionLabel) {
         if (SDK_INT >= ICE_CREAM_SANDWICH) {
             activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
                     WindowManager.LayoutParams.FLAG_SECURE);
@@ -119,57 +119,36 @@ public class CardForm extends LinearLayout implements
         mCvvRequired = cvvRequired;
         mPostalCodeRequired = postalCodeRequired;
 
-        if (mCardNumberRequired) {
-            mCardNumber.setVisibility(View.VISIBLE);
+        if (cardNumberRequired) {
             mCardNumber.addTextChangedListener(this);
-
-            if (mExpirationRequired) {
-                mCardNumber.setNextFocusDownId(mExpiration.getId());
-            } else if (mCvvRequired) {
-                mCardNumber.setNextFocusDownId(mCvv.getId());
-            } else if (mPostalCodeRequired) {
-                mCardNumber.setNextFocusDownId(mPostalCode.getId());
-            }
         } else {
             mCardNumber.setVisibility(View.GONE);
         }
 
-        mExpiration.useDialogForExpirationDateEntry(activity, true);
-        if (mExpirationRequired) {
-            mExpiration.setVisibility(View.VISIBLE);
-            mExpiration.addTextChangedListener(this);
-
-            if (mCvvRequired) {
-                mExpiration.setNextFocusDownId(mCvv.getId());
-            } else if (mPostalCodeRequired) {
-                mExpiration.setNextFocusDownId(mPostalCode.getId());
-            }
+        if (expirationRequired) {
+            mExpirationView.addTextChangedListener(this);
         } else {
-            mExpiration.setVisibility(View.GONE);
+            mExpirationView.setVisibility(View.GONE);
         }
 
-        if (mCvvRequired || mPostalCodeRequired) {
-            mExpiration.setImeOptions(EditorInfo.IME_ACTION_NEXT);
+        if (cvvRequired || postalCodeRequired) {
+            mExpirationView.setImeOptions(EditorInfo.IME_ACTION_NEXT);
         } else {
-            setIMEOptionsForLastEditTestField(mExpiration, imeActionLabel);
+            setIMEOptionsForLastEditTestField(mExpirationView, imeActionLabel);
         }
 
-        if (mCvvRequired) {
-            mCvv.setVisibility(View.VISIBLE);
-            mCvv.addTextChangedListener(this);
-
-            if (mPostalCodeRequired) {
-                mCvv.setImeOptions(EditorInfo.IME_ACTION_NEXT);
-                mCvv.setNextFocusDownId(mPostalCode.getId());
+        if (cvvRequired) {
+            mCvvView.addTextChangedListener(this);
+            if (postalCodeRequired) {
+                mCvvView.setImeOptions(EditorInfo.IME_ACTION_NEXT);
             } else {
-                setIMEOptionsForLastEditTestField(mCvv, imeActionLabel);
+                setIMEOptionsForLastEditTestField(mCvvView, imeActionLabel);
             }
         } else {
-            mCvv.setVisibility(View.GONE);
+            mCvvView.setVisibility(View.GONE);
         }
 
         if (postalCodeRequired) {
-            mPostalCode.setVisibility(View.VISIBLE);
             mPostalCode.addTextChangedListener(this);
             setIMEOptionsForLastEditTestField(mPostalCode, imeActionLabel);
         } else {
@@ -185,17 +164,6 @@ public class CardForm extends LinearLayout implements
         editText.setImeOptions(EditorInfo.IME_ACTION_GO);
         editText.setImeActionLabel(imeActionLabel, EditorInfo.IME_ACTION_GO);
         editText.setOnEditorActionListener(this);
-    }
-
-    /**
-     * Use to enable or disable entry of the expiration date using a dialog. Defaults to using the dialog.
-     *
-     * @param activity used as the parent activity for the dialog
-     * @param useDialog {@code false} to use a numeric keyboard to enter the expiration date, {@code true} to use a
-     *        custom dialog to enter the expiration date. Defaults to {@code true}.
-     */
-    public void useDialogForExpirationDateEntry(Activity activity, boolean useDialog) {
-        mExpiration.useDialogForExpirationDateEntry(activity, useDialog);
     }
 
     /**
@@ -224,22 +192,14 @@ public class CardForm extends LinearLayout implements
     }
 
     /**
-     * Set the listener to receive a callback when the {@link com.braintreepayments.cardform.utils.CardType} changes.
-     * @param listener to receive the callback
-     */
-    public void setOnCardTypeChangedListener(OnCardTypeChangedListener listener) {
-        mOnCardTypeChangedListener = listener;
-    }
-
-    /**
      * Set {@link android.widget.EditText} fields as enabled or disabled
      * @param enabled {@code true} to enable all required fields, {@code false} to disable all
      * required fields
      */
     public void setEnabled(boolean enabled) {
         mCardNumber.setEnabled(enabled);
-        mExpiration.setEnabled(enabled);
-        mCvv.setEnabled(enabled);
+        mExpirationView.setEnabled(enabled);
+        mCvvView.setEnabled(enabled);
         mPostalCode.setEnabled(enabled);
     }
 
@@ -252,10 +212,10 @@ public class CardForm extends LinearLayout implements
             valid = valid && mCardNumber.isValid();
         }
         if (mExpirationRequired) {
-            valid = valid && mExpiration.isValid();
+            valid = valid && mExpirationView.isValid();
         }
         if (mCvvRequired) {
-            valid = valid && mCvv.isValid();
+            valid = valid && mCvvView.isValid();
         }
         if (mPostalCodeRequired) {
             valid = valid && mPostalCode.isValid();
@@ -271,10 +231,10 @@ public class CardForm extends LinearLayout implements
             mCardNumber.validate();
         }
         if (mExpirationRequired) {
-            mExpiration.validate();
+            mExpirationView.validate();
         }
         if (mCvvRequired) {
-            mCvv.validate();
+            mCvvView.validate();
         }
         if (mPostalCodeRequired) {
             mPostalCode.validate();
@@ -296,9 +256,9 @@ public class CardForm extends LinearLayout implements
      */
     public void setExpirationError() {
         if (mExpirationRequired) {
-            mExpiration.setError(true);
+            mExpirationView.setError(true);
             if (!mCardNumberRequired || !mCardNumber.isFocused()) {
-                requestEditTextFocus(mExpiration);
+                requestEditTextFocus(mExpirationView);
             }
         }
     }
@@ -308,10 +268,10 @@ public class CardForm extends LinearLayout implements
      */
     public void setCvvError() {
         if (mCvvRequired) {
-            mCvv.setError(true);
+            mCvvView.setError(true);
             if ((!mCardNumberRequired && !mExpirationRequired) ||
-                (!mCardNumber.isFocused() && !mExpiration.isFocused())) {
-                requestEditTextFocus(mCvv);
+                (!mCardNumber.isFocused() && !mExpirationView.isFocused())) {
+                requestEditTextFocus(mCvvView);
             }
         }
     }
@@ -323,7 +283,7 @@ public class CardForm extends LinearLayout implements
         if (mPostalCodeRequired) {
             mPostalCode.setError(true);
             if ((!mCardNumberRequired && !mExpirationRequired && !mCvvRequired) ||
-                (!mCardNumber.isFocused() && !mExpiration.isFocused() && !mCvv.isFocused())) {
+                (!mCardNumber.isFocused() && !mExpirationView.isFocused() && !mCvvView.isFocused())) {
                 requestEditTextFocus(mPostalCode);
             }
         }
@@ -339,7 +299,8 @@ public class CardForm extends LinearLayout implements
      * Attempt to close the soft keyboard. Will have no effect if the keyboard is not open.
      */
     public void closeSoftKeyboard() {
-        mCardNumber.closeSoftKeyboard();
+        ((InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(getWindowToken(), 0);
     }
 
     /**
@@ -354,7 +315,7 @@ public class CardForm extends LinearLayout implements
      * field. If no month has been specified, an empty string is returned.
      */
     public String getExpirationMonth() {
-        return mExpiration.getMonth();
+        return mExpirationView.getMonth();
     }
 
     /**
@@ -362,14 +323,14 @@ public class CardForm extends LinearLayout implements
      * If no year has been specified, an empty string is returned.
      */
     public String getExpirationYear() {
-        return mExpiration.getYear();
+        return mExpirationView.getYear();
     }
 
     /**
      * @return the text in the cvv field
      */
     public String getCvv() {
-        return mCvv.getText().toString();
+        return mCvvView.getText().toString();
     }
 
     /**
@@ -379,13 +340,46 @@ public class CardForm extends LinearLayout implements
         return mPostalCode.getText().toString();
     }
 
+    /**
+    *  Set credit card number in the TextEdit
+     */
+
+    public void setCardNumber(String cardNumber) {
+        mCardNumber.setText(cardNumber);
+    }
+
+    public void setExpirationDate(String expirationMonth, String expirationYear) {
+        //add leading zero to the month
+        if(expirationMonth.length() == 1) {
+            expirationMonth = "0" + expirationMonth;
+        }
+        //remove the two first digits of the year
+        if(expirationYear.length() == 4) {
+            expirationYear = expirationYear.substring(2,4);
+        }
+
+        mExpirationView.setText(expirationMonth + expirationYear);
+    }
+
+    /**
+     *  Set CVV in the TextEdit
+     */
+
+    public void setCvv(String CVV) {
+        mCvvView.setText(CVV);
+    }
+
+    /**
+     *  Set postal code in the TextEdit
+     */
+
+    public void setPostalCode(String postalCode) {
+        mPostalCode.setText(postalCode);
+    }
+
     @Override
     public void onCardTypeChanged(CardType cardType) {
-        mCvv.setCardType(cardType);
-
-        if (mOnCardTypeChangedListener != null) {
-            mOnCardTypeChangedListener.onCardTypeChanged(cardType);
-        }
+        mCvvView.setCardType(cardType);
     }
 
     @Override
